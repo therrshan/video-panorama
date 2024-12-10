@@ -13,13 +13,11 @@ def stitch_images_left_to_right(images):
 
 
 def stitch_images_center_out(images):
-    """Stitch images from center outwards."""
-    # Begin stitching with the middle image
+
     middle_index = len(images) // 2
     left_image = images[middle_index - 1] if middle_index - 1 >= 0 else None
     right_image = images[middle_index + 1] if middle_index + 1 < len(images) else None
 
-    # Start stitching from the middle
     stitched = images[middle_index]
 
     # Stitch the left image

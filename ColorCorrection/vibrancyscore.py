@@ -5,16 +5,7 @@ from PanoramaGenerator.utils import read_frames
 from utils import *
 
 def select_vibrant_frame(videofile):
-    """
-    Selects the most vibrant frame based on color saturation and intensity variance.
 
-    Args:
-        frames (list of ndarray): List of frames in BGR format.
-
-    Returns:
-        vibrant_frame (ndarray): The most vibrant frame.
-        vibrant_index (int): Index of the most vibrant frame.
-    """
     vibrancy_scores = []
     frames = read_frames(videofile)
     for frame in frames:

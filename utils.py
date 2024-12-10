@@ -1,10 +1,9 @@
-import copy
 from VideoStabilization import VidStab
 import cv2
 
 def video_rendering(frames, filename = "tmp.mp4"):
     h, w = frames[0].shape[0], frames[0].shape[1]
-    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+    fourcc = cv2.VideoWriter_fourcc(*'MP4V')
     out = cv2.VideoWriter(filename, fourcc, 30.0,(w, h))
 
     frames = frames
@@ -19,8 +18,8 @@ def images_from_paths(image_paths):
         if img is None:
             print(f"Warning: Unable to load image at {path}")
         else:
-            newframe = cv2.resize(img, (720, 1080))
-            images.append(newframe)
+            frame = cv2.resize(img, (720, 1080))
+            images.append(frame)
     return images
 
 def video_reader(filename = "input.mp4"):
@@ -32,96 +31,51 @@ def video_reader(filename = "input.mp4"):
             break
 
         frames.append(frame)
-
     cap.release()
     return frames
 
 
 
-def stablization_first_pass(file_path = 'input.mp4', output_path = "tmp.mp4"):
+def stabilization(file_path, output_path):
 
     stabilizer = VidStab(kp_method='FAST', threshold=32, nonmaxSuppression=False)
-    processed_frames = stabilizer.stabilize(input_path=file_path,
-                                            smoothing_window=5,
-                                            output_path=output_path,
-                                            show_progress=True)
-
+    processed_frames = stabilizer.stabilize(input_path=file_path, smoothing_window=3,output_path=output_path, show_progress=True)
     scene_changes = stabilizer.smoothed_trajectory
-    stabilizer.plot_trajectory()
-
     return processed_frames, scene_changes
 
 
-def directional_correction(processed_frames, scene_changes):
-    x_corrds = []
+def frame_sampling(frames, scene_changes):
+    dx = []
+    for change in scene_changes:
+        dx.append(change[0])
 
-    for val in scene_changes:
-        valX = val[0]
-        x_corrds.append(valX)
+    indices_sorted_by_x = sorted(range(len(dx)), key=lambda z: dx[z], reverse=True)
 
-    indices = list(range(len(x_corrds)))
+    max_x_idx = indices_sorted_by_x[0]
+    min_x_idx = indices_sorted_by_x[-1]
 
-    indices.sort(key=lambda i: x_corrds[i], reverse=True)
-    sorted_indices = [int(i) for i in indices]
-
-
-    max_x_idx = sorted_indices[0]
-    min_x_idx = sorted_indices[-1]
-
-
-    sorted_frames = []
-    processed_frames
-    sorted_indices
-    x_corrds
-    kepted_idx = []
+    sampled_frames = []
+    sampled_idx = []
 
     if max_x_idx < min_x_idx:
-        sorted_frames.append(processed_frames[max_x_idx])
+        sampled_frames.append(frames[max_x_idx])
         curr_idx = max_x_idx
-        kepted_idx.append(curr_idx)
+        sampled_idx.append(curr_idx)
         for idx in range(max_x_idx, min_x_idx+1):
-            if x_corrds[idx] < x_corrds[curr_idx] - 40:
-                sorted_frames.append(processed_frames[idx])
+            if dx[idx] < dx[curr_idx] - 40:
+                sampled_frames.append(frames[idx])
                 curr_idx = idx
-                kepted_idx.append(curr_idx)
+                sampled_idx.append(curr_idx)
 
     else:
-        sorted_frames.append(processed_frames[min_x_idx])
+        sampled_frames.append(frames[min_x_idx])
         curr_idx = min_x_idx
-        kepted_idx.append(curr_idx)
+        sampled_idx.append(curr_idx)
         for idx in range(min_x_idx, max_x_idx+1):
-            if x_corrds[idx] > x_corrds[curr_idx] + 40:
-                sorted_frames.append(processed_frames[idx])
+            if dx[idx] > dx[curr_idx] + 40:
+                sampled_frames.append(frames[idx])
                 curr_idx = idx
-                kepted_idx.append(curr_idx)
-        sorted_frames = copy.deepcopy(sorted_frames[::-1])
-        kepted_idx =  copy.deepcopy(kepted_idx[::-1 ])
+                sampled_idx.append(curr_idx)
 
-    return sorted_frames
+    return sampled_frames
 
-
-def stablization_second_pass(input_path = "directional_corrected.mp4", output_path = "tmp.mp4"):
-
-    stabilizer = VidStab(kp_method='FAST', threshold=32, nonmaxSuppression=False)
-    processed_frames = stabilizer.stabilize(input_path=input_path,
-                                            smoothing_window=5,
-                                            output_path=output_path,
-                                            show_progress=True)
-
-    scene_changes = stabilizer.smoothed_trajectory
-
-    stabilizer.plot_trajectory()
-
-    import matplotlib.pyplot as plt
-    plt.show()
-
-
-
-# get the frame width and height
-def get_frame_wh(frames):
-    if len(frames)>0:
-        h = frames[0].shape[0]
-        w = frames[0].shape[1]
-        return w, h
-    else:
-        return None
